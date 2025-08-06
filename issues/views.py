@@ -2,10 +2,11 @@ from rest_framework.decorators import api_view, permission_classes, authenticati
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Issue, Category
-from .serializers import IssueSerializer, CategorySerializer
-from rest_framework.permissions import IsAuthenticated
+from .serializers import IssueSerializer, CategorySerializer, UserRegisterSerializer
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.authentication import TokenAuthentication
 from django.shortcuts import get_object_or_404
+from rest_framework.authtoken.models import Token
 
 @api_view(['GET', 'POST'])
 @authentication_classes([TokenAuthentication])
@@ -59,3 +60,13 @@ def category_list(request):
     categories = Category.objects.all()
     serializer = CategorySerializer(categories, many=True)
     return Response(serializer.data)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def register_user(request):
+    serializer = UserRegisterSerializer(data=request.data)
+    if serializer.is_valid():
+        user = serializer.save()
+        token, _ = Token.objects.get_or_create(user=user)
+        return Response({'token': token.key}, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
